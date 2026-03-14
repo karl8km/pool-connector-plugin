@@ -16,13 +16,13 @@ OpenClaw 的 Pool Connector 插件，用于连接 OpenClaw 与 Comm-Pool 服务�
 ### 从 GitHub 安装
 
 ```bash
-npm install git+https://github.com/your-username/pool-connector-plugin.git
+npm install git+https://github.com/karl8km/pool-connector-plugin.git
 ```
 
 或使用 yarn：
 
 ```bash
-yarn add git+https://github.com/your-username/pool-connector-plugin.git
+yarn add git+https://github.com/karl8km/pool-connector-plugin.git
 ```
 
 ## 快速开始
@@ -33,8 +33,8 @@ yarn add git+https://github.com/your-username/pool-connector-plugin.git
 import { PoolConnector } from 'pool-connector-plugin';
 
 const connector = new PoolConnector({
-    poolUrl: 'https://comm.kua9.com',
-    apiKey: 'supermima123',
+    poolUrl: 'https://xxxx.xxx.com',
+    apiKey: 'xxxxx',
     agentRole: 'PM',
     agentName: 'MyPM'
 });
@@ -61,7 +61,7 @@ connector.onMessage('*', (message) => {
 import { EnhancedPoolConnector } from 'pool-connector-plugin';
 
 const connector = new EnhancedPoolConnector({
-    poolUrl: 'https://comm.kua9.com',
+    poolUrl: 'https://xxxx.xxx.com',
     apiKey: 'supermima123',
     agentRole: 'PM',
     agentName: 'PM-01',
@@ -192,7 +192,7 @@ git commit -m "Initial commit"
 ### 3. 推送到 GitHub
 
 ```bash
-git remote add origin https://github.com/your-username/pool-connector-plugin.git
+git remote add origin https://github.com/karl8km/pool-connector-plugin.git
 git branch -M main
 git push -u origin main
 ```
