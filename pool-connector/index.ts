@@ -1,13 +1,13 @@
 /**
  * Pool Connector Plugin for OpenClaw
- * 
- * 作为 OpenClaw 与 Comm-Pool 之间的桥梁，提供：
+ * * 作为 OpenClaw 与 Comm-Pool 之间的桥梁，提供：
  * - 消息发送/接收适配
  * - 线程管理
  * - 结论提取
  * - Token 压缩与上下文管理
  */
 
+import WebSocket from 'ws'; // 【修复】显式引入 Node.js 的 ws 模块
 import type { OpenClawPlugin, PluginContext, Message, AgentRole } from './types';
 import { PoolClient } from './client';
 import { ThreadManager } from './thread-manager';
@@ -34,6 +34,7 @@ export class PoolConnector implements OpenClawPlugin {
     protected tokenCompressor: TokenCompressor;
     protected messageHandlers: Map<string, Function[]> = new Map();
     protected context?: PluginContext;
+    private reconnectAttempts = 0; // 【新增】用于记录重连次数
     
     constructor(config: PoolConnectorConfig) {
         this.config = {
@@ -70,7 +71,7 @@ export class PoolConnector implements OpenClawPlugin {
     }
     
     /**
-     * 设置 WebSocket 连接
+     * 设置 WebSocket 连接（带断线重连机制）
      */
     private async setupWebSocket(): Promise<void> {
         const wsUrl = this.config.poolUrl.replace(/^http/, 'ws') + '/ws?topic=' + this.config.defaultTopic + '&clientId=' + this.config.agentName;
@@ -78,31 +79,51 @@ export class PoolConnector implements OpenClawPlugin {
         try {
             const ws = new WebSocket(wsUrl);
             
-            (ws as any).onopen = () => {
+            ws.on('open', () => {
                 this.context?.logger.info('[PoolConnector] WebSocket 连接已建立');
-            };
+                this.reconnectAttempts = 0; // 【新增】连接成功后重置重连次数
+            });
             
-            (ws as any).onmessage = (event: any) => {
+            ws.on('message', (data: WebSocket.RawData) => {
                 try {
-                    const data = JSON.parse(event.data);
-                    this.handleIncomingMessage(data);
+                    // 【修复】Node.js ws 库的 data 需要转为 string
+                    const parsedData = JSON.parse(data.toString());
+                    this.handleIncomingMessage(parsedData);
                 } catch (err) {
                     this.context?.logger.error('[PoolConnector] 解析消息失败:', err);
                 }
-            };
+            });
             
-            (ws as any).onclose = () => {
+            ws.on('close', () => {
                 this.context?.logger.warn('[PoolConnector] WebSocket 连接已关闭');
-                // 自动重连
-                setTimeout(() => this.setupWebSocket(), 5000);
-            };
+                this.handleReconnect(); // 【新增】调用退避重连逻辑
+            });
             
-            (ws as any).onerror = (error: any) => {
+            ws.on('error', (error: any) => {
                 this.context?.logger.error('[PoolConnector] WebSocket 错误:', error);
-            };
+            });
         } catch (err) {
             this.context?.logger.error('[PoolConnector] WebSocket 连接失败:', err);
+            this.handleReconnect();
         }
+    }
+
+    /**
+     * 【新增】处理断线重连（指数退避策略防止死循环）
+     */
+    private handleReconnect(): void {
+        const maxAttempts = 10;
+        if (this.reconnectAttempts >= maxAttempts) {
+            this.context?.logger.error(`[PoolConnector] WebSocket 重连次数已达上限 (${maxAttempts}次)，放弃重连。`);
+            return;
+        }
+
+        this.reconnectAttempts++;
+        // 第一次 5秒，第二次 10秒，第三次 20秒... 最高上限 60秒
+        const delay = Math.min(5000 * Math.pow(2, this.reconnectAttempts - 1), 60000);
+        
+        this.context?.logger.info(`[PoolConnector] 将在 ${delay / 1000} 秒后尝试第 ${this.reconnectAttempts} 次重连...`);
+        setTimeout(() => this.setupWebSocket(), delay);
     }
     
     /**
