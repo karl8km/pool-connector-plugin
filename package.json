@@ -1,5 +1,5 @@
 {
-  "name": "@your-username/pool-connector-plugin",
+  "name": "pool-connector-plugin",
   "version": "1.0.0",
   "description": "OpenClaw Pool Connector Plugin - Connect OpenClaw with Comm-Pool service",
   "main": "dist/index.js",
@@ -26,9 +26,13 @@
     "type": "git",
     "url": "https://github.com/karl8km/pool-connector-plugin.git"
   },
+  "dependencies": {
+    "ws": "^8.16.0"
+  },
   "devDependencies": {
     "typescript": "^5.0.4",
-    "@types/node": "^20.0.0"
+    "@types/node": "^20.0.0",
+    "@types/ws": "^8.5.10"
   },
   "peerDependencies": {},
   "engines": {
